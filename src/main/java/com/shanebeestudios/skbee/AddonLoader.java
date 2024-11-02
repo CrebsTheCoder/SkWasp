@@ -161,11 +161,9 @@ public class AddonLoader {
         }
         NBTApi.initializeAPI();
         if (!NBTApi.isEnabled()) {
-            String ver = Skript.getMinecraftVersion().toString();
-            Util.logLoading("&5NBT Elements &cDISABLED!");
-            Util.logLoading(" - Your server version [&b" + ver + "&7] is not currently supported by the NBT-API");
-            Util.logLoading(" - This is not a bug!");
-            Util.logLoading(" - NBT elements will resume once the API is updated to work with [&b" + ver + "&7]");
+            addon.loadClasses("com.shanebeestudios.skbee.elements.nbt");
+            new NBTListener(this.plugin);
+            Util.logLoading("&5NBT Elements &asuccessfully loaded forcedfully :D");
             return;
         }
         try {
