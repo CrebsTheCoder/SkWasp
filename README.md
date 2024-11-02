@@ -1,4 +1,4 @@
-# Continued Fork of SkBee
+# Continued Fork of SkBee/SkBee-Continued
 Why did I fork SkBee? Well you see, Shane has said he would stop working on SkBee for reasons, read his statement [here](https://www.spigotmc.org/resources/skbee-skript-addon.75839/). I have decided to continue this fork of SkBee as it is a useful plugin. Please note I will **NOT** add anymore features, I am just simply updating it to support latest versions of Minecraft & Skript.
 # SkWasp Continued Version of SkBee
 
