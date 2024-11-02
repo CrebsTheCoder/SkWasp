@@ -1,5 +1,5 @@
 main: com.shanebeestudios.skbee.SkBee
-name: SkCrebs
+name: SkWasp
 version: '@version@'
 description: "A Skript addon for nbt and stuff fork i do for fun lmao"
 api-version: '1.13'
