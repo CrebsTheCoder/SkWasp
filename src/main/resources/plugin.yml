@@ -1,7 +1,7 @@
 main: com.shanebeestudios.skbee.SkBee
 name: SkWasp
 version: '@version@'
-description: "A Skript addon for nbt and stuff fork i do for fun lmao"
+description: "A Skript addon for nbt api, expression and events"
 api-version: '1.13'
 contributors: [ShaneBee, Equipable, Crebs]
 website: https://github.com/CrebsTheCoder/SkWasp
