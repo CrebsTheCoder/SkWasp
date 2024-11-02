@@ -53,9 +53,8 @@ public class NBTApi {
         Util.log("&aLoading NBTApi...");
         MinecraftVersion version = MinecraftVersion.getVersion();
         if (version == MinecraftVersion.UNKNOWN) {
-            Util.log("&aSuccessfully forcefully loaded NBTApi!");
-            new NBTContainer("{a:1}").toString();
-            ENABLED = true;
+            Util.log("&cFailed to load NBTApi!");
+            ENABLED = false;
         } else {
             Util.log("&aSuccessfully loaded NBTApi!");
             // Failsafe to make sure API is properly loaded each time
