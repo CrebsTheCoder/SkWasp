@@ -24,7 +24,12 @@ repositories {
 
     // Skript
     maven { url 'https://repo.skriptlang.org/releases' }
-
+    
+    //Virtual Furnace
+    maven {
+        url "https://maven.pkg.github.com/CrebsTheCoder/VirtualFurnace"
+    }
+    
     // JitPack
     maven { url 'https://jitpack.io' }
 
