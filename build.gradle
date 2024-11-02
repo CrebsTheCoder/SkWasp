@@ -63,9 +63,7 @@ dependencies {
     implementation("fr.mrmicky:fastboard:2.1.3")
 
     // Virtual Furnace as a local JAR
-    implementation files('libs/virtualfurnace-api-4.0.0.jar') {
-        transitive = false
-    }
+    implementation files('libs/virtualfurnace-api-4.0.0.jar')
 
     // bStats
     implementation(group: 'org.bstats', name: 'bstats-bukkit', version: '3.0.2')
