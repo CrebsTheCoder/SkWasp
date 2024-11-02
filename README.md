@@ -1,12 +1,13 @@
 # Continued Fork of SkBee
 Why did I fork SkBee? Well you see, Shane has said he would stop working on SkBee for reasons, read his statement [here](https://www.spigotmc.org/resources/skbee-skript-addon.75839/). I have decided to continue this fork of SkBee as it is a useful plugin. Please note I will **NOT** add anymore features, I am just simply updating it to support latest versions of Minecraft & Skript.
-# SkBee-Continued
+# SkWasp Continued Version of SkBee
 
-**SkBee-Continued** is a Skript Addon which is a continued fork of [**SkBee**](https://github.com/ShaneBeee/SkBee) that aims to add more useful elements to [**Skript**](https://github.com/SkriptLang/Skript).
+**SkWasp** is a Skript Addon which is a continued fork of [**SkBee**](https://github.com/ShaneBeee/SkBee) and [**SKbee-Continued**](https://github.com/EquipableMC/SkBee-Continued) that aims to add more useful elements to [**Skript**](https://github.com/SkriptLang/Skript).
 
 # State of SkBee 
 Shane has made the github public again, but archived the repository. He is no longer continuing SkBee. This fork simply just updates SkBee. If you want a fork that will be updated with new features and such, go to Fusezion's [SkImagine](https://github.com/Fusezion/SkImagine) addon here for more information.
 
+## This project is only ment to update stuffs like api updates or support to the latest Minecraft Version 
 ## Elements
 This is only a small list of the many things included
 - **NBT elements** get/set NBT of items, blocks (tile entities) and entities. (Available for 1.8.8+)
