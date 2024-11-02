@@ -1,604 +1,860 @@
-package com.shanebeestudios.skbee;
+package com.shanebeestudios.skbee.api.nbt;
 
 import ch.njol.skript.Skript;
-import ch.njol.skript.SkriptAddon;
-import ch.njol.skript.localization.Noun;
+import ch.njol.skript.aliases.ItemType;
 import ch.njol.skript.registrations.Classes;
-import ch.njol.skript.test.runner.TestMode;
-import ch.njol.skript.util.Version;
-import com.shanebeestudios.skbee.api.listener.EntityListener;
-import com.shanebeestudios.skbee.api.listener.NBTListener;
-import com.shanebeestudios.skbee.api.nbt.NBTApi;
-import com.shanebeestudios.skbee.api.scoreboard.BoardManager;
-import com.shanebeestudios.skbee.api.structure.StructureManager;
-import com.shanebeestudios.skbee.api.util.LoggerBee;
-import com.shanebeestudios.skbee.api.util.SkriptUtils;
+import com.shanebeestudios.skbee.SkBee;
+import com.shanebeestudios.skbee.api.util.Pair;
 import com.shanebeestudios.skbee.api.util.Util;
-import com.shanebeestudios.skbee.config.BoundConfig;
 import com.shanebeestudios.skbee.config.Config;
-import com.shanebeestudios.skbee.elements.virtualfurnace.listener.VirtualFurnaceListener;
-import com.shanebeestudios.skbee.elements.worldcreator.objects.BeeWorldConfig;
-import com.shanebeestudios.vf.api.VirtualFurnaceAPI;
+import de.tr7zw.changeme.nbtapi.NBTCompound;
+import de.tr7zw.changeme.nbtapi.NBTCompoundList;
+import de.tr7zw.changeme.nbtapi.NBTContainer;
+import de.tr7zw.changeme.nbtapi.NBTFile;
+import de.tr7zw.changeme.nbtapi.NBTItem;
+import de.tr7zw.changeme.nbtapi.NBTList;
+import de.tr7zw.changeme.nbtapi.NBTType;
+import de.tr7zw.changeme.nbtapi.NbtApiException;
 import de.tr7zw.changeme.nbtapi.utils.MinecraftVersion;
-import org.bukkit.Bukkit;
-import org.bukkit.Statistic;
-import org.bukkit.boss.BossBar;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginManager;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Team;
+import org.apache.commons.lang3.ArrayUtils;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.TileState;
+import org.bukkit.entity.Entity;
+import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
- * @hidden
+ * Main NBT api for SkBee
  */
-@SuppressWarnings("CallToPrintStackTrace")
-public class AddonLoader {
+@SuppressWarnings("deprecation")
+public class NBTApi {
 
-    private final SkBee plugin;
-    private final PluginManager pluginManager;
-    private final Config config;
-    private final Plugin skriptPlugin;
-    private SkriptAddon addon;
-    private boolean textComponentEnabled;
+    @SuppressWarnings("ConstantConditions")
+    private static boolean ENABLED;
+    private static boolean DEBUG;
+    public static final boolean HAS_ITEM_COMPONENTS = Skript.isRunningMinecraft(1, 20, 5);
+    static final String TAG_NAME = HAS_ITEM_COMPONENTS ? "components" : "tag";
 
-    public AddonLoader(SkBee plugin) {
-        this.plugin = plugin;
-        this.pluginManager = plugin.getServer().getPluginManager();
-        this.config = plugin.getPluginConfig();
-        MinecraftVersion.replaceLogger(LoggerBee.getLogger());
-        this.skriptPlugin = pluginManager.getPlugin("Skript");
+    /**
+     * Initialize this NBT API
+     * <br>
+     * This should NOT be used by other plugins.
+     */
+    public static void initializeAPI() {
+        Util.log("&aLoading NBTApi...");
+        MinecraftVersion version = MinecraftVersion.getVersion();
+        if (version == MinecraftVersion.UNKNOWN) {
+            Util.log("&cFailed to load NBTApi!");
+            ENABLED = false;
+        } else {
+            Util.log("&aSuccessfully loaded NBTApi!");
+            // Failsafe to make sure API is properly loaded each time
+            // This is to prevent an error when unloading/saving vars
+            // noinspection ResultOfMethodCallIgnored
+            new NBTContainer("{a:1}").toString();
+            ENABLED = true;
+        }
+        Config pluginConfig = SkBee.getPlugin().getPluginConfig();
+        DEBUG = pluginConfig.SETTINGS_DEBUG;
     }
 
-    boolean canLoadPlugin() {
-        if (skriptPlugin == null) {
-            Util.log("&cDependency Skript was not found, plugin disabling.");
-            return false;
-        }
-        if (!skriptPlugin.isEnabled()) {
-            Util.log("&cDependency Skript is not enabled, plugin disabling.");
-            Util.log("&cThis could mean SkBee is being forced to load before Skript.");
-            return false;
-        }
-        Version skriptVersion = Skript.getVersion();
-        if (skriptVersion.isSmallerThan(new Version(2, 7))) {
-            Util.log("&cDependency Skript outdated, plugin disabling.");
-            Util.log("&eSkBee requires Skript 2.7+ but found Skript " + skriptVersion);
-            return false;
-        }
-        if (!Skript.isAcceptRegistrations()) {
-            // SkBee should be loading right after Skript, during Skript's registration period
-            // If a plugin is delaying SkBee's loading, this causes issues with registrations and no longer works
-            // We need to find the route of this issue, so far the only plugin I know that does this is PlugMan
-            Util.log("&cSkript is no longer accepting registrations, addons can no longer be loaded!");
-            Plugin plugMan = Bukkit.getPluginManager().getPlugin("PlugMan");
-            if (plugMan != null && plugMan.isEnabled()) {
-                Util.log("&cIt appears you're running PlugMan.");
-                Util.log("&cIf you're trying to reload/enable SkBee with PlugMan.... you can't.");
-                Util.log("&ePlease restart your server!");
+    /**
+     * Check if NBTApi is enabled
+     * <p>This will fail if NBT_API is not available on this server version</p>
+     *
+     * @return True if enabled, otherwise false
+     */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    public static boolean isEnabled() {
+        return ENABLED;
+    }
+
+    /**
+     * Validate an NBT string
+     * <br>
+     * If the NBT is invalid, and error will be thrown.
+     *
+     * @param nbtString NBT string to validate
+     * @return NBTCompound if NBT string is valid, otherwise null
+     */
+    @SuppressWarnings("CallToPrintStackTrace")
+    public static @Nullable NBTCompound validateNBT(String nbtString) {
+        if (nbtString == null) return null;
+        NBTCompound compound;
+        try {
+            compound = new NBTContainer(nbtString);
+        } catch (Exception ex) {
+            Util.skriptError("&cInvalid NBT: &7'&b%s&7'&c", nbtString);
+
+            if (DEBUG) {
+                ex.printStackTrace();
             } else {
-                Util.log("&cNo clue how this could happen.");
-                Util.log("&cSeems a plugin is delaying SkBee loading, which is after Skript stops accepting registrations.");
+                // 3 deep to get the Mojang CommandSyntaxException
+                String cause = ex.getCause().getCause().getCause().toString();
+                cause = cause.replace("com.mojang.brigadier.exceptions.CommandSyntaxException", "MalformedNBT");
+                Util.skriptError("&cMessage: &e%s", cause);
             }
-            return false;
+            Util.errorForAdmins("Invalid NBT, please check console for more details.");
+            return null;
         }
-        Version version = new Version(SkBee.EARLIEST_VERSION);
-        if (!Skript.isRunningMinecraft(version)) {
-            Util.log("&cYour server version &7'&bMC %s&7'&c is not supported, only &7'&bMC %s+&7'&c is supported!", Skript.getMinecraftVersion(), version);
-            Util.log("&7For outdated server versions please see: &ehttps://github.com/ShaneBeee/SkBee#outdated");
-            return false;
-        }
-        loadSkriptElements();
-        return true;
+        return compound;
     }
 
-    private void loadSkriptElements() {
-        this.addon = Skript.registerAddon(this.plugin);
-        this.addon.setLanguageFileDirectory("lang");
+    @Nullable
+    public static Pair<String, NBTCompound> getNestedCompound(String tag, NBTCompound compound, boolean requiresNested) {
+        if (compound == null || tag == null) return null;
+        if (tag.contains(";")) {
+            String subTag = tag.substring(0, tag.lastIndexOf(";")).replace(".", "\\.").replace(";", ".");
+            if (requiresNested) {
+                compound = (NBTCompound) compound.resolveCompound(subTag);
+            } else {
+                compound = (NBTCompound) compound.resolveOrCreateCompound(subTag);
+            }
 
-        int[] elementCountBefore = SkriptUtils.getElementCount();
-        // Load first as it's the base for many things
-        loadOtherElements();
-        // Load next as both are used in other places
-        loadNBTElements();
-        loadTextElements();
-
-        // Load in alphabetical order (to make "/skbee info" easier to read)
-        loadAdvancementElements();
-        loadBossBarElements();
-        loadBoundElements();
-        loadDamageSourceElements();
-        loadDisplayEntityElements();
-        loadFishingElements();
-        loadGameEventElements();
-        loadItemComponentElements();
-        loadParticleElements();
-        loadRayTraceElements();
-        loadRecipeElements();
-        loadScoreboardElements();
-        loadScoreboardObjectiveElements();
-        loadStatisticElements();
-        loadStructureElements();
-        loadTagElements();
-        loadTeamElements();
-        loadTickManagerElements();
-        loadVillagerElements();
-        loadVirtualFurnaceElements();
-        loadWorldBorderElements();
-        loadWorldCreatorElements();
-        loadChunkGenElements();
-
-        int[] elementCountAfter = SkriptUtils.getElementCount();
-        int[] finish = new int[elementCountBefore.length];
-        int total = 0;
-        for (int i = 0; i < elementCountBefore.length; i++) {
-            finish[i] = elementCountAfter[i] - elementCountBefore[i];
-            total += finish[i];
+            tag = getNestedTag(tag);
         }
-        String[] elementNames = new String[]{"event", "effect", "expression", "condition", "section"};
+        if (compound == null || tag == null) return null;
+        return new Pair<>(tag, compound);
+    }
 
-        Util.log("Loaded (%s) elements:", total);
-        for (int i = 0; i < finish.length; i++) {
-            Util.log(" - %s %s%s", finish[i], elementNames[i], finish[i] == 1 ? "" : "s");
+    public static String getNestedTag(String tag) {
+        if (tag.contains(";")) {
+            String[] splits = tag.split(";(?=(([^\"]*\"){2})*[^\"]*$)");
+            return splits[splits.length - 1];
         }
+        return tag;
+    }
 
-        if (this.config.SETTINGS_DEBUG) {
-            // Print names of ClassInfos with missing lang entry
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> Classes.getClassInfos().forEach(classInfo -> {
-                Noun name = classInfo.getName();
-                if (name.toString().contains("types.")) {
-                    Util.log("ClassInfo missing lang entry for: &c%s", name);
+    public static boolean hasTag(NBTCompound compound, String tag) {
+        if (!tag.contains(";")) {
+            return compound.hasTag(tag);
+        }
+        Pair<String, NBTCompound> nestedCompound = getNestedCompound(tag, compound, true);
+        if (nestedCompound != null) return nestedCompound.second().hasTag(nestedCompound.first());
+        return false;
+    }
+
+    /**
+     * Get the {@link NBTCustomType type} of a tag from a compound
+     *
+     * @param compound Compound to grab tag from
+     * @param tag      Tag to check
+     * @return Type of tag
+     */
+    @Nullable
+    public static NBTCustomType getTagType(NBTCompound compound, String tag) {
+        Pair<String, NBTCompound> nestedCompound = getNestedCompound(tag, compound, true);
+        if (nestedCompound != null) {
+            tag = nestedCompound.first();
+            compound = nestedCompound.second();
+            return NBTCustomType.getByTag(compound, tag);
+        }
+        return null;
+    }
+
+    /**
+     * Get an {@link NBTFile}
+     *
+     * @param fileName Name of file
+     * @return new NBTFile
+     */
+    public static @Nullable NBTFile getNBTFile(String fileName) {
+        fileName = !fileName.endsWith(".dat") && !fileName.endsWith(".nbt") ? fileName + ".nbt" : fileName;
+        try {
+            return new NBTFile(new File(fileName));
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get an {@link NBTCustomOfflinePlayer}
+     * <p>This internally just creates a new NBTFile from the player data folder</p>
+     *
+     * @param offlinePlayer OfflinePlayer to grab nbt for
+     * @return NBTCustomOfflinePlayer
+     */
+    public static @Nullable NBTCustomOfflinePlayer getNBTOfflinePlayer(OfflinePlayer offlinePlayer) {
+        // Only return if player data file exists
+        if (!offlinePlayer.hasPlayedBefore()) return null;
+        try {
+            return new NBTCustomOfflinePlayer(offlinePlayer);
+        } catch (IOException ignore) {
+            return null;
+        }
+    }
+
+    /**
+     * Check if an NBT File already exists
+     *
+     * @param fileName Name of file
+     * @return true if file exists else false
+     */
+    public static boolean nbtFileExists(String fileName) {
+        fileName = !fileName.endsWith(".dat") && !fileName.endsWith(".nbt") ? fileName + ".nbt" : fileName;
+        File file = new File(fileName);
+        return file.exists();
+    }
+
+    /**
+     * Merge an {@link NBTCompound} into an {@link ItemType}
+     *
+     * @param itemType    ItemType to add NBT to
+     * @param nbtCompound NBT to add to ItemType
+     * @param custom      Should be stored within the "minecraft:custom_data" component (1.20.5+)
+     * @return ItemType with NBT merged into
+     */
+    public static @Nullable ItemType getItemTypeWithNBT(ItemType itemType, NBTCompound nbtCompound, boolean custom) {
+        NBTContainer itemNBT = NBTItem.convertItemtoNBT(itemType.getRandom());
+
+        // Full NBT
+        if (nbtCompound.hasTag(TAG_NAME)) {
+            if (nbtCompound.hasTag("id") && !itemNBT.getString("id").equalsIgnoreCase(nbtCompound.getString("id"))) {
+                // NBT compounds not the same item
+                return itemType;
+            }
+            itemNBT.mergeCompound(nbtCompound);
+        } else {
+            // Components/Tag portion of NBT
+            NBTCompound components = itemNBT.getOrCreateCompound(TAG_NAME);
+            if (custom && HAS_ITEM_COMPONENTS) components = components.getOrCreateCompound("minecraft:custom_data");
+            components.mergeCompound(nbtCompound);
+        }
+        ItemStack newItemStack = NBTItem.convertNBTtoItem(itemNBT);
+        if (newItemStack == null) return null;
+        return new ItemType(newItemStack);
+    }
+
+    /**
+     * Delete a tag from an {@link NBTCompound}
+     *
+     * @param tag      Tag to delete
+     * @param compound Compound to remove tag from
+     */
+    public static void deleteTag(@NotNull String tag, @NotNull NBTCompound compound) {
+        if (tag.equalsIgnoreCase("custom") && compound instanceof NBTCustom nbtCustom) {
+            nbtCustom.deleteCustomNBT();
+            return;
+        }
+        Pair<String, NBTCompound> nestedCompound = getNestedCompound(tag, compound, true);
+        if (nestedCompound == null) return;
+
+        tag = nestedCompound.first();
+        compound = nestedCompound.second();
+        compound.removeKey(tag);
+    }
+
+    /**
+     * Set a specific tag of an {@link NBTCompound}
+     *
+     * @param tag      Tag that will be set
+     * @param compound Compound to change
+     * @param object   Value of tag to set to
+     * @param type     Type of tag to set
+     */
+    @SuppressWarnings({"RegExpRedundantEscape", "IfCanBeSwitch"})
+    public static void setTag(@NotNull String tag, @NotNull NBTCompound compound, @NotNull Object[] object, NBTCustomType type) {
+        Pair<String, NBTCompound> nestedCompound = getNestedCompound(tag, compound, false);
+        if (nestedCompound == null) return;
+
+        compound = nestedCompound.second();
+        tag = nestedCompound.first();
+
+        Object singleObject = object[0];
+        switch (type) {
+            case NBTTagBoolean:
+                if (singleObject instanceof Boolean bool) {
+                    compound.setBoolean(tag, bool);
                 }
-            }), 1);
+                break;
+            case NBTTagByte:
+                if (singleObject instanceof Number number) {
+                    compound.setByte(tag, number.byteValue());
+                }
+                break;
+            case NBTTagShort:
+                if (singleObject instanceof Number number) {
+                    compound.setShort(tag, number.shortValue());
+                }
+                break;
+            case NBTTagInt:
+                if (singleObject instanceof Number number) {
+                    compound.setInteger(tag, number.intValue());
+                }
+                break;
+
+            case NBTTagLong:
+                if (singleObject instanceof Number number) {
+                    compound.setLong(tag, number.longValue());
+                }
+                break;
+            case NBTTagFloat:
+                if (singleObject instanceof Number number) {
+                    compound.setFloat(tag, number.floatValue());
+                }
+                break;
+            case NBTTagDouble:
+                if (singleObject instanceof Number number) {
+                    compound.setDouble(tag, number.doubleValue());
+                }
+                break;
+            case NBTTagByteArray:
+                if (singleObject instanceof Number) {
+                    byte[] ba = new byte[object.length];
+                    for (int i = 0; i < object.length; i++) {
+                        ba[i] = ((Number) object[i]).byteValue();
+                    }
+                    compound.setByteArray(tag, ba);
+                }
+                break;
+            case NBTTagIntArray:
+                if (singleObject instanceof Number) {
+                    int[] ia = new int[object.length];
+                    for (int i = 0; i < object.length; i++) {
+                        ia[i] = ((Number) object[i]).intValue();
+                    }
+                    compound.setIntArray(tag, ia);
+                }
+                break;
+            case NBTTagUUID:
+                UUID uuid = null;
+                int[] ints = new int[0];
+                if (singleObject instanceof String string) {
+                    try {
+                        uuid = UUID.fromString(string);
+                    } catch (IllegalArgumentException ignore) {
+                    }
+                } else if (singleObject instanceof UUID u) {
+                    uuid = u;
+                } else if (singleObject instanceof Entity entity) {
+                    uuid = entity.getUniqueId();
+                } else if (singleObject instanceof OfflinePlayer offlinePlayer) {
+                    uuid = offlinePlayer.getUniqueId();
+                } else if (singleObject instanceof Number) {
+                    ints = new int[object.length];
+                    for (int i = 0; i < object.length; i++) {
+                        ints[i] = ((Number) object[i]).intValue();
+                    }
+                }
+                if (uuid != null) {
+                    compound.setUUID(tag, uuid);
+                } else if (ints.length == 4) { // Only allows 4 ints
+                    compound.setIntArray(tag, ints);
+                }
+                break;
+            case NBTTagString:
+                if (singleObject instanceof String string) {
+                    compound.setString(tag, string);
+                } else {
+                    compound.setString(tag, Classes.toString(singleObject));
+                }
+                break;
+            case NBTTagCompound:
+                if (singleObject instanceof NBTCompound nbt) {
+                    // Create a copy of the nbt we're going to merge in
+                    NBTContainer copy = new NBTContainer();
+                    copy.mergeCompound(nbt);
+
+                    NBTCompound subCompound = compound.getOrCreateCompound(tag);
+                    // While this shouldn't happen, the API likes to do this for blocks
+                    if (subCompound == null) return;
+                    // Clear out old data before merging
+                    subCompound.clearNBT();
+                    subCompound.mergeCompound(copy);
+                }
+            case NBTTagIntList:
+                if (singleObject instanceof Number) {
+                    NBTList<Integer> intList = compound.getIntegerList(tag);
+                    intList.clear();
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            intList.add(number.intValue());
+                }
+                break;
+            case NBTTagLongList:
+                if (singleObject instanceof Number) {
+                    NBTList<Long> longList = compound.getLongList(tag);
+                    longList.clear();
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            longList.add(number.longValue());
+                }
+                break;
+            case NBTTagFloatList:
+                if (singleObject instanceof Number) {
+                    NBTList<Float> floatList = compound.getFloatList(tag);
+                    floatList.clear();
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            floatList.add(number.floatValue());
+                }
+                break;
+            case NBTTagDoubleList:
+                if (singleObject instanceof Number) {
+                    NBTList<Double> doubleList = compound.getDoubleList(tag);
+                    doubleList.clear();
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            doubleList.add(number.doubleValue());
+                }
+                break;
+            case NBTTagStringList:
+                if (singleObject instanceof String) {
+                    NBTList<String> stringList = compound.getStringList(tag);
+                    stringList.clear();
+                    for (Object o : object)
+                        if (o instanceof String string)
+                            stringList.add(string);
+                }
+                break;
+            case NBTTagCompoundList:
+                if (singleObject instanceof NBTCompound) {
+                    NBTCompoundList compoundList = compound.getCompoundList(tag);
+                    compoundList.clear();
+                    for (Object o : object) {
+                        if (o instanceof NBTCompound comp)
+                            compoundList.addCompound(comp);
+                    }
+                }
+                break;
         }
     }
 
-    private void loadNBTElements() {
-        if (!this.config.ELEMENTS_NBT) {
-            Util.logLoading("&5NBT Elements &cdisabled via config");
-            return;
-        }
-        NBTApi.initializeAPI();
-        if (NBTApi.isEnabled()) {
-            String ver = Skript.getMinecraftVersion().toString();
-            Util.logLoading("&5NBT Elements &cDISABLED!");
-            Util.logLoading(" - Your server version [&b" + ver + "&7] is not currently supported by the NBT-API");
-            Util.logLoading(" - This is not a bug!");
-            Util.logLoading(" - NBT elements will resume once the API is updated to work with [&b" + ver + "&7]");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.nbt");
-            new NBTListener(this.plugin);
-            Util.logLoading("&5NBT Elements &asuccessfully loaded forced fully");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
+    /**
+     * Add a value to a tag
+     *
+     * @param tag      Tag to modify
+     * @param compound Compound to modify
+     * @param object   Value to add
+     * @param type     Type of tag
+     */
+    @SuppressWarnings("RegExpRedundantEscape")
+    public static void addToTag(@NotNull String tag, @NotNull NBTCompound compound, @NotNull Object[] object, NBTCustomType type) {
+        Pair<String, NBTCompound> nestedCompound = getNestedCompound(tag, compound, false);
+        if (nestedCompound == null) return;
+
+        tag = nestedCompound.first();
+        compound = nestedCompound.second();
+
+        // If the tag type doesn't match, return (TagEnd excluded as this means the tag isn't set)
+        NBTCustomType byTag = NBTCustomType.getByTag(compound, tag);
+        if (byTag != NBTCustomType.NBTTagEnd && byTag != type) return;
+
+        Object singleObject = object[0];
+        switch (type) {
+            case NBTTagByte -> {
+                if (singleObject instanceof Number number) {
+                    compound.setByte(tag, (byte) (compound.getByte(tag) + number.byteValue()));
+                }
+            }
+            case NBTTagShort -> {
+                if (singleObject instanceof Number number) {
+                    compound.setShort(tag, (short) (compound.getShort(tag) + number.shortValue()));
+                }
+            }
+            case NBTTagInt -> {
+                if (singleObject instanceof Number number) {
+                    compound.setInteger(tag, compound.getInteger(tag) + number.intValue());
+                }
+            }
+            case NBTTagLong -> {
+                if (singleObject instanceof Number number) {
+                    compound.setLong(tag, compound.getLong(tag) + number.longValue());
+                }
+            }
+            case NBTTagFloat -> {
+                if (singleObject instanceof Number number) {
+                    compound.setFloat(tag, compound.getFloat(tag) + number.floatValue());
+                }
+            }
+            case NBTTagDouble -> {
+                if (singleObject instanceof Number number) {
+                    compound.setDouble(tag, compound.getDouble(tag) + number.doubleValue());
+                }
+            }
+            case NBTTagByteArray -> {
+                if (singleObject instanceof Number) {
+                    byte[] byteArray = compound.getByteArray(tag);
+                    for (Object o : object) {
+                        if (o instanceof Number number) {
+                            byteArray = ArrayUtils.add(byteArray, number.byteValue());
+                        }
+                    }
+                    compound.setByteArray(tag, byteArray);
+                }
+            }
+            case NBTTagIntArray -> {
+                if (singleObject instanceof Number) {
+                    int[] intArray = compound.getIntArray(tag);
+                    for (Object o : object) {
+                        if (o instanceof Number number) {
+                            intArray = ArrayUtils.add(intArray, number.intValue());
+                        }
+                    }
+                    compound.setIntArray(tag, intArray);
+                }
+            }
+            case NBTTagIntList -> {
+                if (singleObject instanceof Number) {
+                    NBTList<Integer> intList = compound.getIntegerList(tag);
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            intList.add(number.intValue());
+                }
+            }
+            case NBTTagLongList -> {
+                if (singleObject instanceof Number) {
+                    NBTList<Long> longList = compound.getLongList(tag);
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            longList.add(number.longValue());
+                }
+            }
+            case NBTTagFloatList -> {
+                if (singleObject instanceof Number) {
+                    NBTList<Float> floatList = compound.getFloatList(tag);
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            floatList.add(number.floatValue());
+                }
+            }
+            case NBTTagDoubleList -> {
+                if (singleObject instanceof Number) {
+                    NBTList<Double> doubleList = compound.getDoubleList(tag);
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            doubleList.add(number.doubleValue());
+                }
+            }
+            case NBTTagStringList -> {
+                if (singleObject instanceof String) {
+                    NBTList<String> stringList = compound.getStringList(tag);
+                    for (Object o : object)
+                        if (o instanceof String string)
+                            stringList.add(string);
+                }
+            }
+            case NBTTagCompoundList -> {
+                if (singleObject instanceof NBTCompound) {
+                    NBTCompoundList compoundList = compound.getCompoundList(tag);
+                    for (Object o : object) {
+                        if (o instanceof NBTCompound comp)
+                            compoundList.addCompound(comp);
+                    }
+                }
+            }
         }
     }
 
-    private void loadRecipeElements() {
-        if (!this.config.ELEMENTS_RECIPE) {
-            Util.logLoading("&5Recipe Elements &cdisabled via config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.recipe");
-            Util.logLoading("&5Recipe Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
+    /**
+     * Remove a value from a tag
+     *
+     * @param tag      Tag to modify
+     * @param compound Compound to modify
+     * @param object   Value to remove
+     * @param type     Type of tag
+     */
+    @SuppressWarnings("RegExpRedundantEscape")
+    public static void removeFromTag(@NotNull String tag, @NotNull NBTCompound compound, @NotNull Object[] object, NBTCustomType type) {
+        Pair<String, NBTCompound> nestedCompound = getNestedCompound(tag, compound, false);
+        if (nestedCompound == null) return;
+
+        tag = nestedCompound.first();
+        compound = nestedCompound.second();
+
+        // If tag type does not match, return!
+        if (NBTCustomType.getByTag(compound, tag) != type) return;
+
+        Object singleObject = object[0];
+        switch (type) {
+            case NBTTagByte -> {
+                if (singleObject instanceof Number number) {
+                    compound.setByte(tag, (byte) (compound.getByte(tag) - number.byteValue()));
+                }
+            }
+            case NBTTagShort -> {
+                if (singleObject instanceof Number number) {
+                    compound.setShort(tag, (short) (compound.getShort(tag) - number.shortValue()));
+                }
+            }
+            case NBTTagInt -> {
+                if (singleObject instanceof Number number) {
+                    compound.setInteger(tag, compound.getInteger(tag) - number.intValue());
+                }
+            }
+            case NBTTagLong -> {
+                if (singleObject instanceof Number number) {
+                    compound.setLong(tag, compound.getLong(tag) - number.longValue());
+                }
+            }
+            case NBTTagFloat -> {
+                if (singleObject instanceof Number number) {
+                    compound.setFloat(tag, compound.getFloat(tag) - number.floatValue());
+                }
+            }
+            case NBTTagDouble -> {
+                if (singleObject instanceof Number number) {
+                    compound.setDouble(tag, compound.getDouble(tag) - number.doubleValue());
+                }
+            }
+            case NBTTagByteArray -> {
+                if (singleObject instanceof Number) {
+                    byte[] byteArray = compound.getByteArray(tag);
+                    if (byteArray == null) return;
+
+                    for (Object o : object) {
+                        if (o instanceof Number number) {
+                            int index = ArrayUtils.indexOf(byteArray, number.byteValue());
+                            byteArray = ArrayUtils.remove(byteArray, index);
+                        }
+                    }
+                    if (byteArray.length > 0) {
+                        compound.setByteArray(tag, byteArray);
+                    } else {
+                        compound.removeKey(tag);
+                    }
+                }
+            }
+            case NBTTagIntArray -> {
+                if (singleObject instanceof Number) {
+                    int[] intArray = compound.getIntArray(tag);
+                    if (intArray == null) return;
+
+                    for (Object o : object) {
+                        if (o instanceof Number number) {
+                            int index = ArrayUtils.indexOf(intArray, number.intValue());
+                            intArray = ArrayUtils.remove(intArray, index);
+                        }
+                    }
+                    if (intArray.length > 0) {
+                        compound.setIntArray(tag, intArray);
+                    } else {
+                        compound.removeKey(tag);
+                    }
+                }
+            }
+            case NBTTagIntList -> {
+                if (singleObject instanceof Number) {
+                    NBTList<Integer> intList = compound.getIntegerList(tag);
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            intList.remove((Object) number.intValue());
+                    if (intList.isEmpty()) compound.removeKey(tag);
+                }
+            }
+            case NBTTagLongList -> {
+                if (singleObject instanceof Number) {
+                    NBTList<Long> longList = compound.getLongList(tag);
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            longList.remove(number.longValue());
+                    if (longList.isEmpty()) compound.removeKey(tag);
+                }
+            }
+            case NBTTagFloatList -> {
+                if (singleObject instanceof Number) {
+                    NBTList<Float> floatList = compound.getFloatList(tag);
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            floatList.remove(number.floatValue());
+                    if (floatList.isEmpty()) compound.removeKey(tag);
+                }
+            }
+            case NBTTagDoubleList -> {
+                if (singleObject instanceof Number) {
+                    NBTList<Double> doubleList = compound.getDoubleList(tag);
+                    for (Object o : object)
+                        if (o instanceof Number number)
+                            doubleList.remove(number.doubleValue());
+                    if (doubleList.isEmpty()) compound.removeKey(tag);
+                }
+            }
+            case NBTTagStringList -> {
+                if (singleObject instanceof String) {
+                    NBTList<String> stringList = compound.getStringList(tag);
+                    for (Object o : object)
+                        if (o instanceof String string)
+                            stringList.remove(string);
+                    if (stringList.isEmpty()) compound.removeKey(tag);
+                }
+            }
+            case NBTTagCompoundList -> {
+                // Not sure if possible, leave for now
+                // Error has been added in ExprTagOfNBT
+            }
         }
     }
 
-    private void loadScoreboardElements() {
-        if (!this.config.ELEMENTS_BOARD) {
-            Util.logLoading("&5Scoreboard Elements &cdisabled via config");
-            return;
+    @Nullable
+    private static Object resolveFromList(NBTCompound compound, String tag, NBTCustomType type) {
+        Class<?> typeClass = type.getTypeClass();
+        String tagWithoutBracket = tag.split("\\[")[0];
+        if (!typeClass.isArray() && compound.hasTag(tagWithoutBracket)) {
+            try {
+                if (type == NBTCustomType.NBTTagCompound) {
+                    return compound.resolveCompound(tag);
+                }
+                return compound.resolveOrNull(tag, typeClass);
+            } catch (NbtApiException ignore) {
+                // Errors if the list is the wrong type
+            }
         }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.scoreboard");
-            pluginManager.registerEvents(new BoardManager(), this.plugin);
-            Util.logLoading("&5Scoreboard Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
+        return null;
+    }
+
+    /**
+     * Get a specific tag from an NBT string
+     * <p>Sub-compounds can be split using ';',
+     * example tag: "custom;sub"</p>
+     *
+     * @param tag      Tag to check for
+     * @param compound NBT to grab tag from
+     * @param type     Type of NBT tag
+     * @return Object from the NBT string
+     */
+    @SuppressWarnings("DataFlowIssue")
+    public static @Nullable Object getTag(@NotNull String tag, @NotNull NBTCompound compound, @NotNull NBTCustomType type) {
+        Pair<String, NBTCompound> nestedCompound = getNestedCompound(tag, compound, type != NBTCustomType.NBTTagCompound);
+        if (nestedCompound == null) return null;
+
+        tag = nestedCompound.first();
+        compound = nestedCompound.second();
+
+        // If the tag has [number] we grab from the list/array
+        if (tag.contains("[") && tag.contains("]")) {
+            return resolveFromList(compound, tag, type);
+        }
+
+        // If the tag is empty/wrongtype, return null, unless it's a compound then we create an empty compound
+        if (type != NBTCustomType.NBTTagCompound && (!compound.hasTag(tag) || compound.getType(tag) != type.getNbtType()))
+            return null;
+        switch (type) {
+            case NBTTagString -> {
+                return compound.getString(tag);
+            }
+            case NBTTagByteArray -> {
+                List<Byte> byteArray = new ArrayList<>();
+                for (byte i : compound.getByteArray(tag)) {
+                    byteArray.add(i);
+                }
+                return byteArray;
+            }
+            case NBTTagIntArray -> {
+                List<Integer> intArray = new ArrayList<>();
+                for (int i : compound.getIntArray(tag)) {
+                    intArray.add(i);
+                }
+                return intArray;
+            }
+            case NBTTagUUID -> {
+                try {
+                    UUID uuid = compound.getUUID(tag);
+                    if (uuid != null) {
+                        return uuid.toString();
+                    }
+                } catch (NbtApiException ignore) {
+                }
+            }
+            case NBTTagBoolean -> {
+                return compound.getBoolean(tag);
+            }
+            case NBTTagByte -> {
+                return compound.getByte(tag);
+            }
+            case NBTTagShort -> {
+                return compound.getShort(tag);
+            }
+            case NBTTagInt -> {
+                return compound.getInteger(tag);
+            }
+            case NBTTagLong -> {
+                return compound.getLong(tag);
+            }
+            case NBTTagFloat -> {
+                return compound.getFloat(tag);
+            }
+            case NBTTagDouble -> {
+                return compound.getDouble(tag);
+            }
+            case NBTTagEnd -> {
+                return null;
+            }
+            case NBTTagCompound -> {
+                if (compound.hasTag(tag)) {
+                    if (compound.getType(tag) == NBTType.NBTTagCompound) {
+                        return compound.getCompound(tag);
+                    }
+                } else {
+                    return compound.getOrCreateCompound(tag);
+                }
+            }
+            case NBTTagCompoundList -> {
+                return new ArrayList<>(compound.getCompoundList(tag));
+            }
+            case NBTTagStringList -> {
+                return new ArrayList<>(compound.getStringList(tag));
+            }
+            case NBTTagDoubleList -> {
+                return new ArrayList<>(compound.getDoubleList(tag));
+            }
+            case NBTTagFloatList -> {
+                return new ArrayList<>(compound.getFloatList(tag));
+            }
+            case NBTTagIntList -> {
+                return new ArrayList<>(compound.getIntegerList(tag));
+            }
+            case NBTTagLongList -> {
+                return new ArrayList<>(compound.getLongList(tag));
+            }
+            default -> {
+                if (SkBee.getPlugin().getPluginConfig().SETTINGS_DEBUG)
+                    throw new IllegalArgumentException("Unknown tag type, please let the dev know -> type: " + type);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Add NBT to a {@link Block}
+     * <br>
+     * This will merge an {@link NBTCompound} into the compound of a block
+     *
+     * @param block    Block to merge NBT into
+     * @param compound Compound to merge
+     */
+    public static void addNBTToBlock(Block block, NBTCompound compound) {
+        // We shouldn't be adding NBT to air
+        if (block.getType().isAir()) return;
+        BlockState blockState = block.getState();
+        if (blockState instanceof TileState tileState) {
+            NBTCustomTileEntity nbtBlock = new NBTCustomTileEntity(tileState);
+            nbtBlock.mergeCompound(compound);
+        } else {
+            NBTCustomBlock nbtCustomBlock = new NBTCustomBlock(block);
+            nbtCustomBlock.mergeCompound(compound);
         }
     }
 
-    private void loadScoreboardObjectiveElements() {
-        if (!this.config.ELEMENTS_OBJECTIVE) {
-            Util.logLoading("&5Scoreboard Objective Elements &cdisabled via config");
-            return;
-        }
-        if (Classes.getClassInfoNoError("objective") != null || Classes.getExactClassInfo(Objective.class) != null) {
-            Util.logLoading("&5Scoreboard Objective Elements &cdisabled");
-            Util.logLoading("&7It appears another Skript addon may have registered Scoreboard Objective syntax.");
-            Util.logLoading("&7To use SkBee Scoreboard Objectives, please remove the addon which has registered Scoreboard Objective already.");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.objective");
-            Util.logLoading("&5Scoreboard Objective Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadTeamElements() {
-        if (!this.config.ELEMENTS_TEAM) {
-            Util.logLoading("&5Team Elements &cdisabled via config");
-            return;
-        }
-        if (Classes.getClassInfoNoError("team") != null || Classes.getExactClassInfo(Team.class) != null) {
-            Util.logLoading("&5Team Elements &cdisabled");
-            Util.logLoading("&7It appears another Skript addon may have registered Team syntax.");
-            Util.logLoading("&7To use SkBee Teams, please remove the addon which has registered Teams already.");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.team");
-            Util.logLoading("&5Team Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadTickManagerElements() {
-        if (!this.config.ELEMENTS_TICK_MANAGER) {
-            Util.logLoading("&5Tick Manager elements &cdisabled via config");
-            return;
-        }
-        if (!Skript.classExists("org.bukkit.ServerTickManager")) {
-            Util.logLoading("&5Tick Manager elements &cdisabled &7(&eRequires Minecraft 1.20.4+&7)");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.tickmanager");
-            Util.logLoading("&5Tick Manager elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadBoundElements() {
-        if (!this.config.ELEMENTS_BOUND) {
-            Util.logLoading("&5Bound Elements &cdisabled via config");
-            return;
-        }
-        try {
-            this.plugin.boundConfig = new BoundConfig(this.plugin);
-            addon.loadClasses("com.shanebeestudios.skbee.elements.bound");
-            Util.logLoading("&5Bound Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadTextElements() {
-        if (!this.config.ELEMENTS_TEXT_COMPONENT) {
-            Util.logLoading("&5Text Component Elements &cdisabled via config");
-            return;
-        }
-        if (!Skript.classExists("io.papermc.paper.event.player.AsyncChatEvent")) {
-            Util.logLoading("&5Text Component Elements &cdisabled");
-            Util.logLoading("&7- Text components require a PaperMC server.");
-            return;
-        }
-        if (Classes.getClassInfoNoError("textcomponent") != null) {
-            Util.logLoading("&5Text Component Elements &cdisabled");
-            Util.logLoading("&7It appears another Skript addon may have registered Text Component syntax.");
-            Util.logLoading("&7To use SkBee Text Components, please remove the addon which has registered Text Components already.");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.text");
-            Util.logLoading("&5Text Component Elements &asuccessfully loaded");
-            this.textComponentEnabled = true;
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadStructureElements() {
-        if (!this.config.ELEMENTS_STRUCTURE) {
-            Util.logLoading("&5Structure Elements &cdisabled via config");
-            return;
-        }
-
-        this.plugin.structureManager = new StructureManager();
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.structure");
-            Util.logLoading("&5Structure Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadVirtualFurnaceElements() {
-        // Force load if running tests as this is defaulted to false in the config
-        if (!this.config.ELEMENTS_VIRTUAL_FURNACE && !TestMode.ENABLED) {
-            Util.logLoading("&5Virtual Furnace Elements &cdisabled via config");
-            return;
-        }
-        // PaperMC check
-        if (!Skript.classExists("net.kyori.adventure.text.Component")) {
-            Util.logLoading("&5Virtual Furnace Elements &cdisabled");
-            Util.logLoading("&7- Virtual Furnace require a PaperMC server.");
-            return;
-        }
-        try {
-            this.plugin.virtualFurnaceAPI = new VirtualFurnaceAPI(this.plugin, true);
-            pluginManager.registerEvents(new VirtualFurnaceListener(), this.plugin);
-            addon.loadClasses("com.shanebeestudios.skbee.elements.virtualfurnace");
-            Util.logLoading("&5Virtual Furnace Elements &asuccessfully loaded");
-        } catch (IOException e) {
-            e.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadOtherElements() {
-        try {
-            pluginManager.registerEvents(new EntityListener(), this.plugin);
-            addon.loadClasses("com.shanebeestudios.skbee.elements.other");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadWorldCreatorElements() {
-        if (!this.config.ELEMENTS_WORLD_CREATOR) {
-            Util.logLoading("&5World Creator Elements &cdisabled via config");
-            return;
-        }
-        try {
-            this.plugin.beeWorldConfig = new BeeWorldConfig(this.plugin);
-            addon.loadClasses("com.shanebeestudios.skbee.elements.worldcreator");
-            Util.logLoading("&5World Creator Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadChunkGenElements() {
-        if (!this.config.ELEMENTS_CHUNK_GEN) {
-            Util.logLoading("&5Chunk Generator Elements &cdisabled via config");
-            return;
-        }
-        if (!this.config.ELEMENTS_WORLD_CREATOR) {
-            Util.logLoading("&5Chunk Generator &cdisabled via World Creator config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.generator");
-            Util.logLoading("&5Chunk Generator Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadGameEventElements() {
-        if (!this.config.ELEMENTS_GAME_EVENT) {
-            Util.logLoading("&5Game Event Elements &cdisabled via config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.gameevent");
-            Util.logLoading("&5Game Event Elements &asuccessfully loaded");
-        } catch (IOException e) {
-            e.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-
-    }
-
-    private void loadBossBarElements() {
-        if (!this.config.ELEMENTS_BOSS_BAR) {
-            Util.logLoading("&5BossBar Elements &cdisabled via config");
-            return;
-        }
-        if (Classes.getClassInfoNoError("bossbar") != null || Classes.getExactClassInfo(BossBar.class) != null) {
-            Util.logLoading("&5BossBar Elements &cdisabled");
-            Util.logLoading("&7It appears another Skript addon may have registered BossBar syntax.");
-            Util.logLoading("&7To use SkBee BossBars, please remove the addon which has registered BossBars already.");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.bossbar");
-            Util.logLoading("&5BossBar Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-
-    }
-
-    private void loadStatisticElements() {
-        if (!this.config.ELEMENTS_STATISTIC) {
-            Util.logLoading("&5Statistic Elements &cdisabled via config");
-            return;
-        }
-        if (Classes.getClassInfoNoError("statistic") != null || Classes.getExactClassInfo(Statistic.class) != null) {
-            Util.logLoading("&5Statistic Elements &cdisabled");
-            Util.logLoading("&7It appears another Skript addon may have registered Statistic syntax.");
-            Util.logLoading("&7To use SkBee Statistics, please remove the addon which has registered Statistic already.");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.statistic");
-            Util.logLoading("&5Statistic Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadVillagerElements() {
-        if (!this.config.ELEMENTS_VILLAGER) {
-            Util.logLoading("&5Villager Elements &cdisabled via config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.villager");
-            Util.logLoading("&5Villager Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadAdvancementElements() {
-        if (!this.config.ELEMENTS_ADVANCEMENT) {
-            Util.logLoading("&5Advancement Elements &cdisabled via config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.advancement");
-            Util.logLoading("&5Advancement Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadWorldBorderElements() {
-        if (!this.config.ELEMENTS_WORLD_BORDER) {
-            Util.logLoading("&5World Border Elements &cdisabled via config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.worldborder");
-            Util.logLoading("&5World Border Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadParticleElements() {
-        if (!this.config.ELEMENTS_PARTICLE) {
-            Util.logLoading("&5Particle Elements &cdisabled via config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.particle");
-            Util.logLoading("&5Particle Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadTagElements() {
-        if (!this.config.ELEMENTS_MINECRAFT_TAG) {
-            Util.logLoading("&5Minecraft Tag elements &cdisabled via config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.tag");
-            Util.logLoading("&5Minecraft Tag elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadRayTraceElements() {
-        if (!this.config.ELEMENTS_RAYTRACE) {
-            Util.logLoading("&5RayTrace elements &cdisabled via config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.raytrace");
-            Util.logLoading("&5RayTrace elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadFishingElements() {
-        if (!this.config.ELEMENTS_FISHING) {
-            Util.logLoading("&5Fishing elements &cdisabled via config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.fishing");
-            Util.logLoading("&5Fishing elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadDisplayEntityElements() {
-        if (!this.config.ELEMENTS_DISPLAY) {
-            Util.logLoading("&5Display Entity elements &cdisabled via config");
-            return;
-        }
-        if (!Skript.isRunningMinecraft(1, 19, 4)) {
-            Util.logLoading("&5Display Entity elements &cdisabled &7(&eRequires Minecraft 1.19.4+&7)");
-            return;
-        }
-        if (!Skript.classExists("org.bukkit.entity.TextDisplay$TextAlignment")) {
-            Util.logLoading("&5Display Entity elements &cdisabled due to a Bukkit API change!");
-            Util.logLoading("&7- &eYou need to update your server to fix this issue!");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.display");
-            Util.logLoading("&5Display Entity elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadDamageSourceElements() {
-        if (!this.config.ELEMENTS_DAMAGE_SOURCE) {
-            Util.logLoading("&5Damage Source elements &cdisabled via config");
-            return;
-        }
-        if (!Skript.classExists("org.bukkit.damage.DamageSource")) {
-            Util.logLoading("&5Damage Source elements &cdisabled &7(&eRequires Minecraft 1.20.4+&7)");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.damagesource");
-            Util.logLoading("&5Damage Source elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    private void loadItemComponentElements() {
-        if (!this.config.ELEMENTS_ITEM_COMPONENT) {
-            Util.logLoading("&5Item Component elements &cdisabled via config");
-            return;
-        }
-        try {
-            addon.loadClasses("com.shanebeestudios.skbee.elements.itemcomponent");
-            Util.logLoading("&5Item Component Elements &asuccessfully loaded");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            pluginManager.disablePlugin(this.plugin);
-        }
-    }
-
-    public boolean isTextComponentEnabled() {
-        return this.textComponentEnabled;
+    /**
+     * Add NBT to an {@link Entity}
+     * <br>
+     * This will merge an {@link NBTCompound} into the compound of an entity
+     *
+     * @param entity   Entity to merge NBT into
+     * @param compound Compound to merge
+     */
+    public static void addNBTToEntity(Entity entity, NBTCompound compound) {
+        NBTCustomEntity nbtEntity = new NBTCustomEntity(entity);
+        nbtEntity.mergeCompound(compound);
     }
 
 }
