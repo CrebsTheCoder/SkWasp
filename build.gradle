@@ -25,15 +25,6 @@ repositories {
     // Skript
     maven { url 'https://repo.skriptlang.org/releases' }
 
-    // GitHub Packages for Virtual Furnace
-    maven {
-        url "https://maven.pkg.github.com/CrebsTheCoder/VirtualFurnace"
-        credentials {
-            username = project.findProperty('GITHUB_USERNAME') ?: System.getenv('GITHUB_USERNAME') ?: ''
-            password = project.findProperty('GITHUB_TOKEN') ?: System.getenv('GITHUB_TOKEN') ?: ''
-        }
-    }
-
     // JitPack
     maven { url 'https://jitpack.io' }
 
@@ -42,7 +33,7 @@ repositories {
 }
 
 dependencies {
-    // Paper API
+    // Paper
     compileOnly "io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT"
 
     // Skript
@@ -62,8 +53,8 @@ dependencies {
     // FastBoard
     implementation("fr.mrmicky:fastboard:2.1.3")
 
-    // Virtual Furnace as a local JAR
-    implementation files('libs/virtualfurnace-api-4.0.0.jar') {
+    // Virtual Furnace
+    implementation("com.github.ShaneBeeStudios:VirtualFurnace:1.0.0") {
         transitive = false
     }
 
@@ -81,9 +72,11 @@ tasks.withType(JavaCompile).configureEach {
 
 build {
     dependsOn(shadowJar)
-    tasks.withType(JavaCompile).configureEach {
-        options.compilerArgs.add("-Xlint:unchecked")
-        options.compilerArgs.add("-Xlint:deprecation")
+    tasks.withType(JavaCompile).tap {
+        configureEach {
+            options.compilerArgs.add("-Xlint:unchecked")
+            options.compilerArgs.add("-Xlint:deprecation")
+        }
     }
 }
 
@@ -95,10 +88,10 @@ processResources {
 
 shadowJar {
     manifest {
-        attributes "Main-Class": "com.shanebeestudios.skbee.game.GamesMain"
+        attributes "Main-Class" : "com.shanebeestudios.skbee.game.GamesMain"
     }
 
-    archiveFileName = "${project.name}-${project.version}.jar"
+    archiveFileName = project.name + "-" + project.version + ".jar"
     relocate("de.tr7zw.changeme.nbtapi", "com.shanebeestudios.skbee.api.nbt")
     relocate("de.tr7zw.annotations", "com.shanebeestudios.skbee.api.nbt.annotations")
     relocate("fr.mrmicky.fastboard", "com.shanebeestudios.skbee.api.fastboard")
