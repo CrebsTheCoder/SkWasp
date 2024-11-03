@@ -38,7 +38,6 @@ import java.util.List;
     "- `saturation` = The amount of saturation restored by this item when eaten.",
     "- `can always eat` = If true, this item can be eaten even if the player is not hungry. Defaults to false. [Optional]",
     "- `using converts to` = The item to replace this item with when it is eaten. [Optional] (Requires Minecraft 1.21+)",
-    "- `effects:` = A section to apply potion effects to this food item. [Optional]"})
 @Examples({"# Directly apply a food component to the player's tool",
     "apply food component to player's tool:",
     "\tnutrition: 5",
@@ -51,9 +50,6 @@ import java.util.List;
     "\tsaturation: 3",
     "\tusing converts to: 1 of bowl",
     "\tcan always eat: true",
-    "\teffects:",
-    "\t\tapply potion effect of nausea without particles for 10 seconds",
-    "\t\tapply potion effect of poison without particles for 5 seconds ",
     "give player 1 of {_i}"})
 @Since("3.5.8")
 public class SecFoodComponent extends Section {
@@ -112,10 +108,6 @@ public class SecFoodComponent extends Section {
             Skript.error("'using converts to' requires Minecraft 1.21+");
             return false;
         }
-        SectionNode potionEffects = container.getOptional("effects", SectionNode.class, false);
-        if (potionEffects != null) {
-            this.potionEffectSection = loadCode(potionEffects, "potion effects", FoodComponentApplyEvent.class);
-        }
         return true;
     }
 
@@ -132,7 +124,6 @@ public class SecFoodComponent extends Section {
         float saturation = saturationNum.floatValue();
 
         boolean canAlwaysEat = this.canAlwaysEat != null ? this.canAlwaysEat.getSingle(event) : false;
-        Timespan eatTime = this.eatTime != null ? this.eatTime.getSingle(event) : null;
         ItemStack usingConvertsTo = this.usingConverts != null ? this.usingConverts.getSingle(event).getRandom() : null;
 
         for (ItemType itemType : this.items.getArray(event)) {
