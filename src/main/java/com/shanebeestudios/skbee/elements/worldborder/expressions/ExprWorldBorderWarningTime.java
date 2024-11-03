@@ -42,7 +42,7 @@ public class ExprWorldBorderWarningTime extends SimplePropertyExpression<WorldBo
         Timespan timespan = (Timespan) delta[0];
         if (timespan == null) return;
 
-        int seconds = (int)(timespan.getTicks() / 20);
+        int seconds = (int)(timespan.getAs(Timespan.TimePeriod.TICK) / 20);
         for (WorldBorder border : getExpr().getArray(event)) {
             border.setWarningTime(seconds);
         }
