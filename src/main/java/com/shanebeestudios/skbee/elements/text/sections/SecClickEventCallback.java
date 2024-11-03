@@ -105,7 +105,7 @@ public class SecClickEventCallback extends Section {
             Duration lifeTime = ClickCallback.DEFAULT_LIFETIME;
             if (this.lifeTime != null) {
                 Timespan lifeTimeSpan = this.lifeTime.getSingle(event);
-                if (lifeTimeSpan != null) lifeTime = Duration.ofMillis(lifeTimeSpan.getMilliSeconds());
+                if (lifeTimeSpan != null) lifeTime = Duration.ofMillis(lifeTimeSpan.getAs(TimePeriod.MILLISECOND));
             }
 
             Object localVariables = Variables.copyLocalVariables(event);
