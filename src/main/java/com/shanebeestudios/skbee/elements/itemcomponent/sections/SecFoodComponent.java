@@ -37,7 +37,9 @@ import java.util.List;
     "- `nutrition` = The number of food points restored by this item when eaten. Must be a non-negative integer.",
     "- `saturation` = The amount of saturation restored by this item when eaten.",
     "- `can always eat` = If true, this item can be eaten even if the player is not hungry. Defaults to false. [Optional]",
+    "- `eat time` = The number of seconds taken by this item to be eaten. Defaults to 1.6 seconds. [Optional]",
     "- `using converts to` = The item to replace this item with when it is eaten. [Optional] (Requires Minecraft 1.21+)",
+    "- `effects:` = A section to apply potion effects to this food item. [Optional]"})
 @Examples({"# Directly apply a food component to the player's tool",
     "apply food component to player's tool:",
     "\tnutrition: 5",
@@ -50,6 +52,9 @@ import java.util.List;
     "\tsaturation: 3",
     "\tusing converts to: 1 of bowl",
     "\tcan always eat: true",
+    "\teffects:",
+    "\t\tapply potion effect of nausea without particles for 10 seconds",
+    "\t\tapply potion effect of poison without particles for 5 seconds ",
     "give player 1 of {_i}"})
 @Since("3.5.8")
 public class SecFoodComponent extends Section {
