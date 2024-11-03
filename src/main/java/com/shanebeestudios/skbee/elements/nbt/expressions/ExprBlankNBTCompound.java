@@ -37,8 +37,11 @@ public class ExprBlankNBTCompound extends SimpleExpression<NBTCompound> {
     @SuppressWarnings("NullableProblems")
     @Override
     protected @Nullable NBTCompound[] get(Event event) {
-        return new NBTCompound[]{new NBTContainer()};
+        NBTContainer container = new NBTContainer(); // Creates the parent NBT container
+        NBTCompound blankCompound = container.getOrCreateCompound("tempCompound"); // Creates an empty sub-compound
+        return new NBTCompound[]{blankCompound}; // Returns an empty NBT compound
     }
+
 
     @Override
     public boolean isSingle() {
