@@ -47,7 +47,7 @@ public class ExprFishHookWaitTime extends SimplePropertyExpression<Entity, Times
     public @Nullable Timespan convert(Entity entity) {
         if (entity instanceof FishHook fishHook) {
             int wait = this.max ? fishHook.getMaxWaitTime() : fishHook.getMinWaitTime();
-            return Timespan.fromTicks(wait);
+            return new Timespan(Timespan.TimePeriod.TICK, wait);
         }
         return null;
     }

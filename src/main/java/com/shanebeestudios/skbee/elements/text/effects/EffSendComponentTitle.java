@@ -61,19 +61,19 @@ public class EffSendComponentTitle extends Effect {
         if (this.stay != null) {
             Timespan staySingle = this.stay.getSingle(event);
             if (staySingle != null) {
-                stay = staySingle.getTicks();
+                stay = staySingle.getAs(Timespan.TimePeriod.TICK);
             }
         }
         if (this.fadeIn != null) {
             Timespan fadeInSingle = this.fadeIn.getSingle(event);
             if (fadeInSingle != null) {
-                fadeIn = fadeInSingle.getTicks();
+                fadeIn = fadeInSingle.getAs(Timespan.TimePeriod.TICK);
             }
         }
         if (this.fadeOut != null) {
             Timespan fadeOutSingle = this.fadeOut.getSingle(event);
             if (fadeOutSingle != null) {
-                fadeOut = fadeOutSingle.getTicks();
+                fadeOut = fadeOutSingle.getAs(Timespan.TimePeriod.TICK);
             }
         }
         ComponentWrapper.sendTitle(players, title, subtitle, stay, fadeIn, fadeOut);

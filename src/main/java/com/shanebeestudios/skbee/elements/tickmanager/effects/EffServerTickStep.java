@@ -51,7 +51,7 @@ public class EffServerTickStep extends Effect {
         } else {
             Timespan timespan = this.ticks.getSingle(event);
             if (timespan != null) {
-                tickManager.stepGameIfFrozen((int) timespan.getTicks());
+                tickManager.stepGameIfFrozen((int) timespan.getAs(Timespan.TimePeriod.TICK));
             }
         }
     }

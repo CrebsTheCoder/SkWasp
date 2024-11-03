@@ -11,7 +11,9 @@ import ch.njol.skript.lang.Section;
 import ch.njol.skript.lang.SkriptParser.ParseResult;
 import ch.njol.skript.lang.Trigger;
 import ch.njol.skript.lang.TriggerItem;
+import ch.njol.skript.util.Date;
 import ch.njol.skript.util.Timespan;
+import ch.njol.skript.util.Timespan.TimePeriod;
 import ch.njol.skript.variables.Variables;
 import ch.njol.util.Kleenean;
 import com.shanebeestudios.skbee.api.wrapper.ComponentWrapper;
@@ -103,7 +105,7 @@ public class SecClickEventCallback extends Section {
             Duration lifeTime = ClickCallback.DEFAULT_LIFETIME;
             if (this.lifeTime != null) {
                 Timespan lifeTimeSpan = this.lifeTime.getSingle(event);
-                if (lifeTimeSpan != null) lifeTime = Duration.ofMillis(lifeTimeSpan.getMilliSeconds());
+                if (lifeTimeSpan != null) lifeTime = Duration.ofMillis(lifeTimeSpan.getAs(TimePeriod.MILLISECOND));
             }
 
             Object localVariables = Variables.copyLocalVariables(event);
