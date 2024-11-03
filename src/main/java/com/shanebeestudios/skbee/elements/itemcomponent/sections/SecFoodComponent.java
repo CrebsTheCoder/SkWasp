@@ -10,6 +10,7 @@ import ch.njol.skript.doc.Since;
 import ch.njol.skript.lang.Expression;
 import ch.njol.skript.lang.Section;
 import ch.njol.skript.lang.SkriptParser.ParseResult;
+import ch.njol.skript.lang.Trigger;
 import ch.njol.skript.lang.TriggerItem;
 import ch.njol.skript.util.Timespan;
 import ch.njol.skript.variables.Variables;
@@ -36,7 +37,6 @@ import java.util.List;
     "- `nutrition` = The number of food points restored by this item when eaten. Must be a non-negative integer.",
     "- `saturation` = The amount of saturation restored by this item when eaten.",
     "- `can always eat` = If true, this item can be eaten even if the player is not hungry. Defaults to false. [Optional]",
-    "- `eat time` = removed not supported anymore sorry :c",
     "- `using converts to` = The item to replace this item with when it is eaten. [Optional] (Requires Minecraft 1.21+)",
     "- `effects:` = A section to apply potion effects to this food item. [Optional]"})
 @Examples({"# Directly apply a food component to the player's tool",
@@ -85,7 +85,6 @@ public class SecFoodComponent extends Section {
             VALIDATIOR.addEntryData(new ExpressionEntryData<>("nutrition", null, false, Number.class));
             VALIDATIOR.addEntryData(new ExpressionEntryData<>("saturation", null, false, Number.class));
             VALIDATIOR.addEntryData(new ExpressionEntryData<>("can always eat", null, true, Boolean.class));
-            VALIDATIOR.addEntryData(new ExpressionEntryData<>("eat time", null, true, Timespan.class));
             VALIDATIOR.addEntryData(new ExpressionEntryData<>("using converts to", null, true, ItemType.class));
             VALIDATIOR.addSection("effects", true);
             Skript.registerSection(SecFoodComponent.class, "apply food component to %itemtypes%");
@@ -96,9 +95,7 @@ public class SecFoodComponent extends Section {
     private Expression<Number> nutrition;
     private Expression<Number> saturation;
     private Expression<Boolean> canAlwaysEat;
-    private Expression<Timespan> eatTime;
     private Expression<ItemType> usingConverts;
-    private Trigger potionEffectSection;
 
     @SuppressWarnings({"NullableProblems", "unchecked"})
     @Override
@@ -110,7 +107,6 @@ public class SecFoodComponent extends Section {
         this.nutrition = (Expression<Number>) container.getOptional("nutrition", false);
         this.saturation = (Expression<Number>) container.getOptional("saturation", false);
         this.canAlwaysEat = (Expression<Boolean>) container.getOptional("can always eat", false);
-        this.eatTime = (Expression<Timespan>) container.getOptional("eat time", false);
         this.usingConverts = (Expression<ItemType>) container.getOptional("using converts to", false);
         if (this.usingConverts != null && !HAS_CONVERT) {
             Skript.error("'using converts to' requires Minecraft 1.21+");
@@ -146,20 +142,6 @@ public class SecFoodComponent extends Section {
             food.setNutrition(nutrition);
             food.setSaturation(saturation);
             food.setCanAlwaysEat(canAlwaysEat);
-            // Removed setEatSeconds as it no longer exists
-            // You may want to handle the eat time differently depending on your requirements
-            if (HAS_CONVERT && usingConvertsTo != null) {
-                food.setUsingConvertsTo(usingConvertsTo);
-            }
-
-            if (this.potionEffectSection != null) {
-                FoodComponentApplyEvent foodEvent = new FoodComponentApplyEvent(food);
-                Variables.setLocalVariables(foodEvent, localVars);
-                TriggerItem.walk(this.potionEffectSection, foodEvent);
-                Variables.setLocalVariables(event, Variables.copyLocalVariables(foodEvent));
-                Variables.removeLocals(foodEvent);
-            }
-
             itemMeta.setFood(food);
             itemType.setItemMeta(itemMeta);
         }
@@ -170,4 +152,5 @@ public class SecFoodComponent extends Section {
     public @NotNull String toString(Event e, boolean d) {
         return "apply food component to " + this.items.toString(e, d);
     }
+
 }
