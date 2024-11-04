@@ -26,3 +26,6 @@ See the [**Wiki**](https://github.com/ShaneBeee/SkBee/wiki) for more detailed in
 
 ## Docs
 [![SkriptHubViewTheDocs](http://skripthub.net/static/addon/ViewTheDocsButton.png)](http://skripthub.net/docs/?addon=SkBee)
+
+
+<meta name="google-site-verification" content="IJfrFk2XJIy3VY7ZpdnhDWQtvN2BW_Qy_2N7_qXvEME" />
