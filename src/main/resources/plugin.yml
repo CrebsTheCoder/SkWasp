@@ -1,4 +1,4 @@
-main: com.shanebeestudios.skbee.SkBee
+main: com.crebsthecoder.skwasp.SkBee
 name: SkWasp
 version: '@version@'
 description: "A Skript addon for nbt api, expression and events"
