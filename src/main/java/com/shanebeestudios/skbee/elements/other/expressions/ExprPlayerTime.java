@@ -84,7 +84,7 @@ public class ExprPlayerTime extends SimplePropertyExpression<Player, Object> {
             if (delta[0] instanceof Timespan timespan) {
                 ticks = (int) timespan.getAs(Timespan.TimePeriod.TICK);
             } else if (delta[0] instanceof Time time) {
-                ticks = time.getAs(Timespan.TimePeriod.TICK);
+                ticks = timespan.getAs(Timespan.TimePeriod.TICK);
             }
             for (Player player : this.getExpr().getArray(event)) {
                 int value = getValue(mode, player, ticks);
