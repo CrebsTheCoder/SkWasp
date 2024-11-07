@@ -56,7 +56,7 @@ public class ExprPlayerTime extends SimplePropertyExpression<Player, Object> {
     @Override
     public @Nullable Object convert(Player player) {
         if (this.relative) {
-            return Timespan.fromTicks(player.getPlayerTimeOffset());
+            return new Timespan(Timespan.TimePeriod, player.getPlayerTimeOffset());
         }
         return new Time((int) player.getPlayerTime());
     }

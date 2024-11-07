@@ -26,7 +26,7 @@ public class ExprPotionEffectDuration extends SimplePropertyExpression<PotionEff
         int duration = potionEffect.getDuration();
         // Duration will be -1 when infinite
         duration = duration < 0 ? Integer.MAX_VALUE : duration;
-        return Timespan.fromTicks(duration);
+        return Timespan.Timespan(Timespan.TimePeriod, duration);
     }
 
     @Override

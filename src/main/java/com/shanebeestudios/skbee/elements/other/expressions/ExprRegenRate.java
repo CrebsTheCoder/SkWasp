@@ -47,7 +47,7 @@ public class ExprRegenRate extends SimplePropertyExpression<Player, Timespan> {
     @Override
     public @Nullable Timespan convert(Player player) {
         int ticks = this.saturated ? player.getSaturatedRegenRate() : player.getUnsaturatedRegenRate();
-        return Timespan.fromTicks(ticks);
+        return Timespan.Timespan(Timespan.TimePeriod, ticks);
     }
 
     @SuppressWarnings("NullableProblems")
