@@ -308,7 +308,7 @@ public class OtherEvents extends SimpleEvent {
         EventValues.registerEventValue(EntityAirChangeEvent.class, Timespan.class, new Getter<>() {
             @Override
             public Timespan get(EntityAirChangeEvent event) {
-                return Timespan.Timespan(Timespan.TimePeriod.TICK, event.getAmount());
+                return Timespan(Timespan.TimePeriod.TICK, event.getAmount());
             }
         }, EventValues.TIME_NOW);
 
