@@ -66,7 +66,7 @@ public class ExprRegenRate extends SimplePropertyExpression<Player, Timespan> {
         int changeValue;
         if (mode == ChangeMode.RESET) changeValue = this.saturated ? 10 : 80;
         else if (delta != null && delta[0] instanceof Timespan timespan) {
-            changeValue = (int) timespan.getTicks();
+            changeValue = (int) timespan.getAs(Timespan.TimePeriod.TICK);
         } else return;
 
 
