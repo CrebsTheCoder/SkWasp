@@ -53,7 +53,7 @@ public class ExprSpawnerSpawnDelay extends SimplePropertyExpression<Block, Times
                 case TRUE -> spawner.getMaxSpawnDelay();
                 default -> spawner.getDelay();
             };
-            return Timespan.Timespan(Timespan.TimePeriod, delay);
+            return Timespan.Timespan(Timespan.TimePeriod.TICK, delay);
         }
         return null;
     }
