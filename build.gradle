@@ -11,7 +11,7 @@ compileJava {
 }
 
 // SkBee-Continued version
-version = '3.8'
+version = '3.8.1'
 def latestJava = 21
 def oldestJava = 17
 
@@ -96,7 +96,6 @@ shadowJar {
     relocate("de.tr7zw.annotations", "com.crebsthecoder.skwasp.api.nbt.annotations")
     relocate("fr.mrmicky.fastboard", "com.crebsthecoder.skwasp.api.fastboard")
     relocate("com.shanebeestudios.vf", "com.crebsthecoder.skwasp.api.virtualfurnace")
-    relocate("com.shanebeestudios.skbee", "com.crebsthecoder.skwasp")
     relocate("org.bstats", "com.crebsthecoder.skwasp.metrics")
     exclude('META-INF/**', 'LICENSE')
 }
