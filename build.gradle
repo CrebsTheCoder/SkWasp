@@ -97,7 +97,6 @@ shadowJar {
     relocate("fr.mrmicky.fastboard", "com.crebsthecoder.skwasp.api.fastboard")
     relocate("com.shanebeestudios.vf", "com.crebsthecoder.skwasp.api.virtualfurnace")
     relocate("com.shanebeestudios.skbee", "com.crebsthecoder.skwasp")
-    relocate("org.bstats", "com.crebsthecoder.skwasp.metrics")
     exclude('META-INF/**', 'LICENSE')
 }
 
@@ -129,6 +128,6 @@ javadoc {
         links('https://jd.advntr.dev/api/4.14.0/')
     }
     options.addStringOption('Xdoclint:none', '-quiet')
-    exclude("com/shanebeestudios/skbee/api/listener", "com/shanebeestudios/skbee/elements",
-            "com/shanebeestudios/skbee/api/command", "com/shanebeestudios/skbee/game")
+    exclude("com/crebsthecoder/skwasp/api/listener", "com/crebsthecoder/skwasp/elements",
+            "com/crebsthecoder/skwasp/api/command", "com/crebsthecoder/skwasp/game")
 }
