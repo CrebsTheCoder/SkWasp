@@ -49,8 +49,8 @@ public class UpdateChecker implements Listener {
                 if (!player.hasPermission("skbee.update.check")) return;
 
                 Bukkit.getScheduler().runTaskLater(UpdateChecker.this.plugin, () -> getUpdateVersion(true).thenApply(version -> {
-                    Util.sendColMsg(player, "&7[&bSk&3Bee&7] update available: &a" + version);
-                    Util.sendColMsg(player, "&7[&bSk&3Bee&7] download at &bhttps://github.com/ShaneBeee/SkBee/releases");
+                    Util.sendColMsg(player, "&7[&bSk&3Wasp&7] update available: &a" + version);
+                    Util.sendColMsg(player, "&7[&bSk&3Wasp&7] download at &bhttps://github.com/crebsthecoder/skwasp/releases");
                     return true;
                 }), 30);
             }
@@ -63,7 +63,7 @@ public class UpdateChecker implements Listener {
             Util.logLoading("&cPlugin is not up to date!");
             Util.logLoading(" - Current version: &cv%s", this.pluginVersion);
             Util.logLoading(" - Available update: &av%s", version);
-            Util.logLoading(" - Download available at: https://github.com/ShaneBeee/SkBee/releases");
+            Util.logLoading(" - Download available at: https://github.com/crebsthecoder/skwasp/releases");
             return true;
         }).exceptionally(throwable -> {
             Util.logLoading("&aPlugin is up to date!");

@@ -10,7 +10,7 @@ depend:
 loadbefore:
     - SkQuery
 commands:
-    skbee:
+    skwasp:
         description: Main SkBee command
         permission: skbee.command
 permissions:
