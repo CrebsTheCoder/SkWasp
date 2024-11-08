@@ -28,15 +28,16 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
-      - name: Set outputs
-        id: short_sha
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-
       - name: Get Version from build.gradle
         id: gradle_version
         run: |
           version=$(grep '^version' build.gradle | sed -E 's/^version\s*=\s*"(.*)"/\1/')
           echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Create Git Tag
+        run: |
+          git tag ${{ steps.gradle_version.outputs.version }}
+          git push origin ${{ steps.gradle_version.outputs.version }}
 
       - name: Get Repository Name
         uses: MariachiBear/get-repo-name-action@v1.1.0
@@ -51,7 +52,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: ${{ steps.repo-name.outputs.repository-name }}
-          tag_name: v${{ steps.gradle_version.outputs.version }}-${{ steps.short_sha.outputs.sha_short }}
+          tag_name: ${{ steps.gradle_version.outputs.version }}
           body: |
             This release is automatically compiled by GitHub Actions
           files: |
