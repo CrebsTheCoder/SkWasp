@@ -5,10 +5,10 @@ Why did I fork SkBee? Well you see, Shane has said he would stop working on SkBe
 
 [**SkriptHub/SkBee**](https://github.com/SkriptHub/SkBee/)
 
-[**SKbee-Continued**](https://github.com/EquipableMC/SkBee-Continued)
+[**EquipableMC/Skbee-Continued**](https://github.com/EquipableMC/SkBee-Continued)
 
 
-**SkWasp** is a Skript Addon which is a fork of [**SkBee**](https://github.com/ShaneBeee/SkBee) / [**SKbee-Continued**](https://github.com/EquipableMC/SkBee-Continued) that aims to add more useful elements to [**Skript**](https://github.com/SkriptLang/Skript).
+**SkWasp** is a Skript Addon which is a fork of [**SkBee**](https://github.com/ShaneBeee/SkBee) / [**Skbee-Continued**](https://github.com/EquipableMC/SkBee-Continued) that aims to add more useful elements to [**Skript**](https://github.com/SkriptLang/Skript).
 
 # State of SkBee 
 Shane has made the github public again, but archived the repository. He is no longer continuing SkBee. This fork simply just updates SkBee. If you want a fork that will be updated with new features and such, go to Fusezion's [SkImagine](https://github.com/Fusezion/SkImagine) addon here for more information.
