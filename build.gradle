@@ -58,8 +58,6 @@ dependencies {
         transitive = false
     }
 
-    // bStats
-    implementation(group: 'org.bstats', name: 'bstats-bukkit', version: '3.0.2')
 }
 
 java {

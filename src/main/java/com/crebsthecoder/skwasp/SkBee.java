@@ -12,8 +12,6 @@ import com.crebsthecoder.skwasp.config.Config;
 import com.crebsthecoder.skwasp.elements.other.sections.SecRunTaskLater;
 import com.crebsthecoder.skwasp.elements.worldcreator.objects.BeeWorldConfig;
 import com.shanebeestudios.vf.api.VirtualFurnaceAPI;
-import org.bstats.bukkit.Metrics;
-import org.bstats.charts.SimplePie;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.plugin.PluginManager;
@@ -74,7 +72,6 @@ public class SkBee extends JavaPlugin {
             return;
         }
         loadCommands();
-        loadMetrics();
 
         // Beta check + notice
         String version = getDescription().getVersion();
@@ -99,11 +96,6 @@ public class SkBee extends JavaPlugin {
         //pm.registerEvents(new ScriptListener(), this); // Temp removed
     }
 
-    private void loadMetrics() { //6719
-        Metrics metrics = new Metrics(this, 23443);
-        metrics.addCustomChart(new SimplePie("skript_version", () -> Skript.getVersion().toString()));
-        metrics.addCustomChart(new SimplePie("virtual_furnace", () -> String.valueOf(config.ELEMENTS_VIRTUAL_FURNACE)));
-    }
 
     /**
      * @hidden

@@ -38,12 +38,12 @@ public class SkBeeInfo implements TabExecutor {
             sendColMsg(sender, "&7Skript Addons:");
             Skript.getAddons().forEach(addon -> {
                 String name = addon.getName();
-                if (!name.contains("SkBee")) {
+                if (!name.contains("SkWasp")) {
                     sendColMsg(sender, "&7- &b" + name + " v" + addon.plugin.getDescription().getVersion());
                 }
             });
-            sendColMsg(sender, "&7SkBee Version: &b" + desc.getVersion());
-            sendColMsg(sender, "&7SkBee Website: &b" + desc.getWebsite());
+            sendColMsg(sender, "&7SkWasp Version: &b" + desc.getVersion());
+            sendColMsg(sender, "&7SkWasp Website: &b" + desc.getWebsite());
         }
         return true;
     }

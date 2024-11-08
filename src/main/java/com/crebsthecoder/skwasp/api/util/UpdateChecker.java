@@ -108,7 +108,7 @@ public class UpdateChecker implements Listener {
     @SuppressWarnings("CallToPrintStackTrace")
     private @Nullable Version getLastestVersionFromGitHub() {
         try {
-            URL url = new URL("https://api.github.com/repos/ShaneBeee/SkBee/releases/latest");
+            URL url = new URL("https://api.github.com/repos/CrebsTheCoder/SkWasp/releases/latest");
             BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
             JsonObject jsonObject = new Gson().fromJson(reader, JsonObject.class);
             String tag_name = jsonObject.get("tag_name").getAsString();
