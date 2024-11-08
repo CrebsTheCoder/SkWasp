@@ -26,7 +26,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build with Gradle
-        run: ./gradlew build  # Use the Gradle wrapper to run the build
+        run: ./gradlew build
 
       - name: Set outputs
         id: short_sha
@@ -51,7 +51,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: ${{ steps.repo-name.outputs.repository-name }}
-          tag_name: ${{ steps.gradle_version.outputs.version }}-${{ steps.short_sha.outputs.sha_short }}
+          tag_name: v${{ steps.gradle_version.outputs.version }}-${{ steps.short_sha.outputs.sha_short }}
           body: |
             This release is automatically compiled by GitHub Actions
           files: |
