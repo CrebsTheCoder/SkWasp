@@ -32,20 +32,26 @@ jobs:
         id: short_sha
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
+      - name: Get Version from build.gradle
+        id: gradle_version
+        run: |
+          version=$(grep '^version' build.gradle | sed -E 's/^version\s*=\s*"(.*)"/\1/')
+          echo "version=$version" >> $GITHUB_OUTPUT
+
       - name: Get Repository Name
         uses: MariachiBear/get-repo-name-action@v1.1.0
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.repo-name.outputs.repository-name }} ${{ steps.short_sha.outputs.sha_short }}
+          name: ${{ steps.repo-name.outputs.repository-name }}-${{ steps.short_sha.outputs.sha_short }}
           path: build/libs/*.jar
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           name: ${{ steps.repo-name.outputs.repository-name }}
-          tag_name: ${{ steps.short_sha.outputs.sha_short }}
+          tag_name: ${{ steps.gradle_version.outputs.version }}-${{ steps.short_sha.outputs.sha_short }}
           body: |
             This release is automatically compiled by GitHub Actions
           files: |
