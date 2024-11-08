@@ -10,8 +10,8 @@ compileJava {
     options.encoding = 'UTF-8'
 }
 
-// SkBee-Continued version
-version = '3.8.1'
+// SkWasp version
+version = '3.8.2'
 def latestJava = 21
 def oldestJava = 17
 
