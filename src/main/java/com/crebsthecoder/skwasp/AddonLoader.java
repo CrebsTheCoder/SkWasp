@@ -58,7 +58,7 @@ public class AddonLoader {
         }
         if (!skriptPlugin.isEnabled()) {
             Util.log("&cDependency Skript is not enabled, plugin disabling.");
-            Util.log("&cThis could mean SkBee is being forced to load before Skript.");
+            Util.log("&cThis could mean SkWasp is being forced to load before Skript.");
             return false;
         }
         Version skriptVersion = Skript.getVersion();
