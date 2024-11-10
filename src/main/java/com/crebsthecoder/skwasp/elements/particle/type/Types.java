@@ -21,6 +21,7 @@ import org.bukkit.Vibration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+@SuppressWarnings("UnstableApiUsage")
 public class Types {
 
     static {
@@ -47,7 +48,7 @@ public class Types {
 
                     @Override
                     public @NotNull String toString(Particle particle, int flags) {
-                        return ParticleUtil.getName(particle);
+                        return "" + ParticleUtil.getName(particle);
                     }
 
                     @Override
@@ -98,6 +99,13 @@ public class Types {
         Classes.registerClass(new ClassInfo<>(Vibration.class, "vibration")
             .name(ClassInfo.NO_DOC).user("vibrations?")
             .parser(SkriptUtils.getDefaultParser()));
+
+        if (ParticleUtil.HAS_TARGET_COLOR && Classes.getExactClassInfo(Particle.TargetColor.class) == null) {
+            Classes.registerClass(new ClassInfo<>(Particle.TargetColor.class, "targetcolor")
+                .name(ClassInfo.NO_DOC)
+                .user("target ?colors?")
+                .parser(SkriptUtils.getDefaultParser()));
+        }
 
 
         // == FUNCTIONS ==
@@ -157,7 +165,7 @@ public class Types {
                 // Apparently original location makes no difference
                 Location origin = new Location(null, 0, 0, 0);
                 Location destination = (Location) params[0][0];
-                int arrivalTime = (int) ((Timespan) params[1][0]).getAs(Timespan.TimePeriod.TICK);
+                int arrivalTime = (int) ((Timespan) params[1][0]).getTicks();
                 Vibration vibration = new Vibration(origin, new Vibration.Destination.BlockDestination(destination), arrivalTime);
                 return new Vibration[]{vibration};
             }
@@ -167,6 +175,27 @@ public class Types {
                 "Requires MC 1.17+")
             .examples("set {_v} to vibration({loc}, 10 seconds)")
             .since("1.11.1"));
+
+        if (ParticleUtil.HAS_TARGET_COLOR) {
+            //noinspection DataFlowIssue
+            Functions.registerFunction(new SimpleJavaFunction<>("targetColor", new Parameter[]{
+                    new Parameter<>("target", DefaultClasses.LOCATION, true, null),
+                    new Parameter<>("color", DefaultClasses.COLOR, true, null)
+                }, Classes.getExactClassInfo(Particle.TargetColor.class), true) {
+                    @SuppressWarnings("NullableProblems")
+                    @Override
+                    public Particle.TargetColor[] executeSimple(Object[][] params) {
+                        Location target = (Location) params[0][0];
+                        org.bukkit.Color color = ((Color) params[1][0]).asBukkitColor();
+                        return new Particle.TargetColor[]{new Particle.TargetColor(target, color)};
+                    }
+                }).description("Creates a new target color to be used with 'trail' particle.",
+                    "Takes in a location for the target (where the trail heads to) and the color.",
+                    "Requires Minecraft 1.21.2+")
+                .examples("set {_target} to targetColor(location of target block, blue)",
+                    "make 10 of trail using {_target} at location of player")
+                .since("INSERT VERSION");
+        }
     }
 
 }
