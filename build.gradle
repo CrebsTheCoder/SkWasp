@@ -123,7 +123,7 @@ javadoc {
         links('https://hub.spigotmc.org/javadocs/spigot/')
         links('https://docs.skriptlang.org/javadocs/')
         links('https://tr7zw.github.io/Item-NBT-API/v2-api/')
-        links('https://jd.advntr.dev/api/4.14.0/')
+        links('https://jd.advntr.dev/api/4.14.1/')
     }
     options.addStringOption('Xdoclint:none', '-quiet')
     exclude("com/crebsthecoder/skwasp/api/listener", "com/crebsthecoder/skwasp/elements",
